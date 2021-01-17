@@ -1,0 +1,6 @@
+[
+    {
+        "path": "/lesson/",
+        "matchPath": "/lesson/*"
+    }
+]

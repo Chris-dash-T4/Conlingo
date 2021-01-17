@@ -1,0 +1,152 @@
+#progressbar{
+  padding-top: 20px;
+  margin: auto;
+  width: 75%;
+}
+
+#progressbar > div{
+  margin: auto;
+  display: inline-block;
+  border-radius: 8px;
+  width: 100%;
+}
+
+#prompt_aln {
+    width: 75%;
+    margin: auto;
+}
+
+#prompt {
+  margin: auto;
+  padding: 40px;
+}
+
+h2 {
+  padding-left: 20px;
+  font-family: sans-serif;
+}
+
+#question_content {
+    width: 65%;
+    margin: auto;
+}
+
+#original {
+  margin: auto;
+  padding-left: 45px;
+}
+
+#translation{
+  padding: 40px;
+  margin: auto;
+}
+
+#translation > div{
+  margin: auto;
+  width: 500px;
+}
+
+.final_word_container {
+  height: 60px;
+  border-bottom: 2px solid grey;
+}
+
+#wordbank {
+  padding: 40px;
+  margin: auto;
+  text-align: center;
+}
+
+.wb_opt {
+  padding: 0px;
+  margin: auto;
+  display: inline-block;
+  text-align: center;
+  overflow: auto;
+  margin-right: 4px;
+}
+
+.final_word_container > .wb_opt {
+  margin-top: 15px;
+}
+
+#mc_list {
+  padding: 40px;
+  margin: auto;
+  text-align: center;
+}
+
+.mc_choice {
+  padding: 6px;
+  margin: auto;
+  display: inline-block;
+  border: 1px solid black;
+  border-radius: 5px;
+  width: 400px;
+  height: 24px;
+  text-align: center;
+  vertical-align: middle;
+  overflow: auto;
+  margin-top: 8px;
+}
+
+
+#sentence_container {
+  padding: 40px;
+  margin: auto;
+  text-align: center;
+}
+
+#sentence {
+  width: 500px;
+  height: 120px;
+}
+
+#pair_container {
+  padding: 40px;
+  margin: auto;
+  margin-top: 60px;
+  text-align: center;
+}
+
+.mp_opt {
+  padding: 6px;
+  margin: auto;
+  margin-top: 6px;
+  display: inline-block;
+  border: 1px solid black;
+  border-radius: 5px;
+  width: 48px;
+  height: 24px;
+  text-align: center;
+  vertical-align: middle;
+  overflow: auto;
+  margin-right: 4px;
+}
+
+#checkbar{
+  padding-bottom: 50px;
+  margin: auto;
+  position: absolute;
+  bottom: 0px;
+  left: 0px;
+  height: 50px;
+  width: 100%;
+}
+
+#checktext{
+  position: absolute;
+  top: 25px;
+  left: 60px;
+  height: 20px;
+}
+
+#continuebutton {
+  position: absolute;
+  bottom: 15px;
+  right: 10%;
+  border-radius: 5px;
+  height: 40px;
+  width: 80px;
+  text-align: center;
+}
