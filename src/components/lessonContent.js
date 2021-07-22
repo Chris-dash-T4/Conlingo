@@ -62,12 +62,36 @@ function arraysEqual(a, b) {
   return true;
 }
 
+function equiv(a, b) {
+  // Create arrays of property names
+  var aProps = Object.getOwnPropertyNames(a);
+  var bProps = Object.getOwnPropertyNames(b);
+
+  // If number of properties is different,
+  // objects are not equivalent
+  if (aProps.length != bProps.length) {
+    return false;
+  }
+
+  for (var i = 0; i < aProps.length; i++) {
+    let propName = aProps[i];
+
+    // If values of same property are not equal,
+    // objects are not equivalent
+    if (a[propName] !== b[propName]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 function waitUntil(param, test = (x => x), time = 3000) {
-  console.log('helo');
+  //console.log('helo');
   return new Promise((resolve,reject) => {
     var start_time = Date.now();
     function checkFlag() {
-      // console.log(param);
+      console.log(param);
       if (test(param)) {
         console.log('met');
         resolve();
@@ -90,7 +114,7 @@ class Question extends React.Component {
 
   constructor(props) {
     super(props);
-    console.log(props.parent);
+    //console.log(props.parent);
     //props will be a dictionary object containing various attributes
     this.type=props.type;
     this.phrase = props.phrase;
@@ -205,7 +229,7 @@ class Question extends React.Component {
       setPrompt("Match the pairs.");
     }
     this.ready = true;
-    console.log('troled once again');
+    //console.log('troled once again');
   }
 
   toLines(i) {
@@ -350,7 +374,7 @@ class QuestionContainer extends React.Component {
       super();
       this.clong_name=props.lang;
       console.log(this.clong_name);
-      this.qs=[]; // TODO load from db/json
+      let q_data=[]; // TODO load from db/json
       const sample1 = {
             "phrase":"Man.",
             "translation":["Horse"],
@@ -384,33 +408,44 @@ class QuestionContainer extends React.Component {
             "choices":[["man","horse"],["sauce","sus"],["click","jebo"],["to add","li te"],["text","pas"],["funny","haaah"]],
             "eng":1,"clong":1
       }
-      this.qs.push([sample1,Question.bank]);
-      this.qs.push([sample2,Question.bank]);
-      this.qs.push([sample3,Question.multichoice]);
-      this.qs.push([sample4,Question.sentence]);
-      this.qs.push([sample5,Question.bank]);
-      this.qs.push([sample6,Question.matching]);
+      q_data.push([sample1,Question.bank]);
+      q_data.push([sample2,Question.bank]);
+      q_data.push([sample3,Question.multichoice]);
+      q_data.push([sample4,Question.sentence]);
+      q_data.push([sample5,Question.bank]);
+      q_data.push([sample6,Question.matching]);
+
+      const qs = [];
+      const refs = [];
+      for (var i = 0; i < q_data.length; i++) {
+        let j = i;
+        const q_n = (
+            <Question type={q_data[j][1]} phrase={q_data[j][0].phrase}
+                      translation={q_data[j][0].translation} prompter={this.setPrompt.bind(this)}
+                      choices={q_data[j][0].choices} ref={ref => {if (ref && refs.length <= j) refs.push(ref); console.log(j); console.log(ref);}}
+                      eng={q_data[j][0].eng} clong={q_data[j][0].clong} parent={this}/>
+            );
+        qs.push(q_n);
+      }
 
       const dat_out=JSON.stringify(this.qs);
       console.log(dat_out);
-      this.state = {checkDisabled: false, answering: true, currPrompt: "click to add text"};
+      this.state = {checkDisabled: false, answering: true, currPrompt: "click to add text", qs, refs, q_c: 0};
 
       this.state.content = (
             <>
               <div id="prompt_aln">
                 <h2 id="prompt">{this.state.currPrompt}</h2>
               </div>
-              <Question type={this.qs[0][1]} phrase={this.qs[0][0].phrase}
-                        translation={this.qs[0][0].translation} prompter={this.setPrompt.bind(this)}
-                        choices={this.qs[0][0].choices} ref={ref => {this.state.q_c = ref}}
-                        eng={this.qs[0][0].eng} clong={this.qs[0][0].clong} parent={this}/>
+              {this.state.qs.map((x,i) => i===this.state.q_c && x)}
               <div id="checkbar" style={this.state.answering?{}:{backgroundColor: this.state.barColor}}>
                 <div id="checktext">
                     {this.state.barText}
                 </div>
                 {/*!this.state.answering && <Card />*/}
-                <Button id="continuebutton" disabled={!this.state.aaaaaaa}
-                        onClick={() => this.state.q_c.checkAns(this.displayStatus.bind(this))} positive>
+                <Button id="continuebutton" disabled={this.state.checkDisabled}
+                        onClick={this.state.answering?() => this.state.refs[this.state.q_c].checkAns(this.displayStatus.bind(this)):this.nextQuestion.bind(this)}
+                        positive>
                   {this.state.answering?"Check":"Next"}
                 </Button>
                 <audio className="success" ref={ref => {success_a = ref}}>
@@ -423,7 +458,7 @@ class QuestionContainer extends React.Component {
             </>
       );
 
-      waitUntil(this, o => (o.state.q_c && o.state.q_c.ready)).then(this.refreshContent.bind(this), () => console.log('no'));
+      waitUntil(this, o => (o.state.refs[this.state.q_c] && o.state.refs[this.state.q_c].ready)).then(this.refreshContent.bind(this), () => console.log('no'));
   }
 
   refreshContent() {
@@ -432,17 +467,15 @@ class QuestionContainer extends React.Component {
             <div id="prompt_aln">
               <h2 id="prompt">{this.state.currPrompt}</h2>
             </div>
-            <Question type={this.qs[0][1]} phrase={this.qs[0][0].phrase}
-                      translation={this.qs[0][0].translation} prompter={this.setPrompt.bind(this)}
-                      choices={this.qs[0][0].choices} ref={ref => {this.state.q_c = ref}}
-                      eng={this.qs[0][0].eng} clong={this.qs[0][0].clong} parent={this}/>
+            {this.state.qs.map((x,i) => i===this.state.q_c && x)}
             <div id="checkbar" style={this.state.answering?{}:{backgroundColor: this.state.barColor}}>
               <div id="checktext">
                   {this.state.barText}
               </div>
               {/*!this.state.answering && <Card />*/}
               <Button id="continuebutton" disabled={this.state.checkDisabled}
-                      onClick={() => this.state.q_c.checkAns(this.displayStatus.bind(this))} positive>
+                      onClick={this.state.answering?() => this.state.refs[this.state.q_c].checkAns(this.displayStatus.bind(this)):this.nextQuestion.bind(this)}
+                      positive>
                 {this.state.answering?"Check":"Next"}
               </Button>
               <audio className="success" ref={ref => {success_a = ref}}>
@@ -467,9 +500,9 @@ class QuestionContainer extends React.Component {
   }
 
   displayStatus(correct,ans) {
-    console.log("perkele");
     let text = "";
-    if (correct==2) {
+    let qs = this.state.qs;
+    if (correct===2) {
       text="Correct. Another correct response is '"+ans+"'.";
     }
     else if (correct) {
@@ -477,15 +510,22 @@ class QuestionContainer extends React.Component {
     }
     else {
       text="The correct answer was '"+ans+"'."
+      qs.push(qs[0]);
     }
-    this.setState({barColor: correct?"#0f0":"#f00", barText: text})
-    console.log('heh');
+    this.setState({barColor: correct?"#0f0":"#f00", barText: text, qs})
     waitUntil(this, o => o.state.barColor && o.state.barText).then(this.refreshContent.bind(this), () => console.log('bre'));
   }
 
+  nextQuestion() {
+    this.setState({barColor: undefined, barText: "", q_c: this.state.q_c+1})
+    this.toggleClick();
+    this.refreshContent();
+    waitUntil(this, o => (o.state.refs[this.state.q_c] && o.state.refs[this.state.q_c].ready)).then(this.refreshContent.bind(this), () => console.log('no'));
+  }
+
   render() {
-    console.log("dis ben gerendeered");
-    console.log(this.state.content);
+    //console.log("dis ben gerendeered");
+    //console.log(this.state.content);
     return this.state.content;
   }
 }
