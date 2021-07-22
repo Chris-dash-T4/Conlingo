@@ -63,11 +63,12 @@ function arraysEqual(a, b) {
 }
 
 function waitUntil(param, test = (x => x), time = 3000) {
+  console.log('helo');
   return new Promise((resolve,reject) => {
     var start_time = Date.now();
     function checkFlag() {
-      console.log(param.value);
-      if (test(param.value)) {
+      // console.log(param);
+      if (test(param)) {
         console.log('met');
         resolve();
       } else if (Date.now() > start_time + time) {
@@ -422,8 +423,7 @@ class QuestionContainer extends React.Component {
             </>
       );
 
-      waitUntil({'value': this.state.q_c}, undefined, 10000).then(() => console.log('troled'), () => console.log('no'));
-      //this.refreshContent();
+      waitUntil(this, o => (o.state.q_c && o.state.q_c.ready)).then(this.refreshContent.bind(this), () => console.log('no'));
   }
 
   refreshContent() {
@@ -463,7 +463,7 @@ class QuestionContainer extends React.Component {
 
   setPrompt(p) {
     this.setState({currPrompt: p});
-    this.refreshContent();
+    //this.refreshContent();
   }
 
   displayStatus(correct,ans) {
@@ -479,7 +479,8 @@ class QuestionContainer extends React.Component {
       text="The correct answer was '"+ans+"'."
     }
     this.setState({barColor: correct?"#0f0":"#f00", barText: text})
-    this.refreshContent();
+    console.log('heh');
+    waitUntil(this, o => o.state.barColor && o.state.barText).then(this.refreshContent.bind(this), () => console.log('bre'));
   }
 
   render() {
