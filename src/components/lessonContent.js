@@ -1,10 +1,13 @@
 import React from 'react'
-import { Button, Form } from 'semantic-ui-react';
+import { Button, Card, Form } from 'semantic-ui-react';
 import './lesson.css'
 import { positions, WordOption, WordBank, TranslationLines } from './lessonUtils.js';
 
 let currPrompt = "click to add text";
 let clong_name = "bruh";
+let strip_punct = (s) => {
+    s.replace('.','').replace(',','').replace("'",'').replace('"','').replace(';','').replace(':','').replace('!','').replace('?','').replace('\n','');
+}
 //vars so thing doesn't break
 var success_a;
 var fail_a;
@@ -59,6 +62,25 @@ function arraysEqual(a, b) {
   return true;
 }
 
+function waitUntil(param, test = (x => x), time = 3000) {
+  return new Promise((resolve,reject) => {
+    var start_time = Date.now();
+    function checkFlag() {
+      console.log(param.value);
+      if (test(param.value)) {
+        console.log('met');
+        resolve();
+      } else if (Date.now() > start_time + time) {
+        console.log('not met, time out');
+        reject();
+      } else {
+        window.setTimeout(checkFlag, 1000);
+      }
+    }
+    checkFlag();
+  });
+}
+
 class Question extends React.Component {
   static get bank() { return 0; }
   static get multichoice() { return 1; }
@@ -81,8 +103,10 @@ class Question extends React.Component {
         lines: [],
         content:null,
     };
+    this.par = props.parent
     //undefined elements will not be used with the given Question type
-    props.parent.setState({currPrompt: "Write this in "+lang+"."});
+    let setPrompt = props.prompter;
+    setPrompt("Write this in "+lang+".");
     var i;
     if (this.type === Question.bank) {
       let bank_em = [];
@@ -135,7 +159,7 @@ class Question extends React.Component {
             </div>
           </div>
       );
-      props.parent.setState({currPrompt: "Select the correct translation."});
+      setPrompt("Select the correct translation.");
     }
     if (this.type === Question.sentence) {
       this.state.content = (
@@ -150,7 +174,7 @@ class Question extends React.Component {
           </div>
       );
       for (i=0;i<props.translation.length;i++) {
-        this.translation[i]=props.translation[i].toLowerCase().replace('.','').replace(',','').replace("'",'').replace('"','').replace(';','').replace(':','').replace('!','').replace('?','')
+        this.translation[i]=strip_punct(props.translation[i].toLowerCase());
       }
     }
     if (this.type === Question.matching) {
@@ -177,42 +201,48 @@ class Question extends React.Component {
             </div>
           </div>
       );
-      props.parent.setState({currPrompt: "Match the pairs."});
+      setPrompt("Match the pairs.");
     }
+    this.ready = true;
+    console.log('troled once again');
   }
 
   toLines(i) {
-    let bank = this.state.bank.slice(0);
-    let rem = bank.splice(i,1);
-    let lines = this.state.lines.concat(rem);
-    this.setState({
-        bank: bank,
-        lines: lines,
-    });
-    this.children.bank.setState({
-      children: bank,
-    });
-    this.children.lines.setState({
-      children: lines,
-    });
+    if (this.par.state.answering) {
+      let bank = this.state.bank.slice(0);
+      let rem = bank.splice(i,1);
+      let lines = this.state.lines.concat(rem);
+      this.setState({
+          bank: bank,
+          lines: lines,
+      });
+      this.children.bank.setState({
+        children: bank,
+      });
+      this.children.lines.setState({
+        children: lines,
+      });
+    }
   }
 
   toBank(i) {
-    let lines = this.state.lines.slice(0);
-    let rem = lines.splice(i,1);
-    let bank = this.state.bank.concat(rem);
-    this.setState({
+    if (this.par.state.answering) {
+      let lines = this.state.lines.slice(0);
+      let rem = lines.splice(i,1);
+      let bank = this.state.bank.concat(rem);
+      this.setState({
         bank: bank,
         lines: lines,
-    });
-    this.children.bank.setState({
-      children: bank,
-    });
-    this.children.lines.setState({
-      children: lines,
-    });
+      });
+      this.children.bank.setState({
+        children: bank,
+      });
+      this.children.lines.setState({
+        children: lines,
+      });
+    }
   }
-/*
+
   verify() {
     var fin_tr="";
     var i;
@@ -261,7 +291,7 @@ class Question extends React.Component {
     }//^^ multiple choice
     if (this.type===Question.sentence) {
       const fin_em = document.getElementById("sentence");
-      fin_tr=fin_em.value.toLowerCase().replace('.','').replace(',','').replace("'",'').replace('"','').replace(';','').replace(':','').replace('!','').replace('?','').replace('\n','');
+      fin_tr=fin_em.value.toLowerCase();
       console.log('"'+fin_tr+'"');
       if (fin_tr===this.translation[0]) {
         return true;
@@ -283,7 +313,7 @@ class Question extends React.Component {
     }
     return false;
   }
-*/
+
   onePair(n) {
     console.log('1p');
   }
@@ -292,35 +322,17 @@ class Question extends React.Component {
     console.log('2p');
   }
 
-  checkAns() {
+  checkAns(update) {
     console.log("check");
-    /*
-    on_check=true;
-    const head=document.getElementById("checkbar");
-    const next_b=document.getElementById("continuebutton");
-    const text=document.getElementById("checktext");
-    disableClickAction();
+    this.par.toggleClick();
     const correct = this.verify();
+    update(correct, this.translation[0]);
     if (correct) {
-      head.style.backgroundColor="#0f0";
       success_a.play();
-      if (correct==2) {
-        text.innerText="Correct. Another correct response is '"+this.translation[0]+"'.";
-      }
-      else {
-        text.innerText="Correct. Good job!";
-      }
-      next_b.innerText="Continue";
     }
     else {
-      head.style.backgroundColor="#f00";
       fail_a.play();
-      text.innerText="The correct answer was '"+this.translation[0]+"'.";
-      next_b.innerText="Continue";
-      qs.push(qs[completion]);
     }
-    next_b.setAttribute('onclick',"nextQuestion()");
-    movebar();*/
   }
 
   render() {
@@ -380,7 +392,7 @@ class QuestionContainer extends React.Component {
 
       const dat_out=JSON.stringify(this.qs);
       console.log(dat_out);
-      this.state = {next: false, checkEnabled: true, currPrompt: "click to add text"};
+      this.state = {checkDisabled: false, answering: true, currPrompt: "click to add text"};
 
       this.state.content = (
             <>
@@ -388,22 +400,91 @@ class QuestionContainer extends React.Component {
                 <h2 id="prompt">{this.state.currPrompt}</h2>
               </div>
               <Question type={this.qs[0][1]} phrase={this.qs[0][0].phrase}
-                        translation={this.qs[0][0].translation}
+                        translation={this.qs[0][0].translation} prompter={this.setPrompt.bind(this)}
                         choices={this.qs[0][0].choices} ref={ref => {this.state.q_c = ref}}
                         eng={this.qs[0][0].eng} clong={this.qs[0][0].clong} parent={this}/>
-              <div id="checkbar">
+              <div id="checkbar" style={this.state.answering?{}:{backgroundColor: this.state.barColor}}>
                 <div id="checktext">
+                    {this.state.barText}
                 </div>
-                <Button id="continuebutton" disabled={!this.state.checkEnabled}
-                        onClick={() => this.state.q_c.checkAns()} positive>
-                  {this.state.next?"Next":"Check"}
+                {/*!this.state.answering && <Card />*/}
+                <Button id="continuebutton" disabled={!this.state.aaaaaaa}
+                        onClick={() => this.state.q_c.checkAns(this.displayStatus.bind(this))} positive>
+                  {this.state.answering?"Check":"Next"}
                 </Button>
+                <audio className="success" ref={ref => {success_a = ref}}>
+                  <source src="http://soundfxcenter.com/video-games/super-mario-bros/8d82b5_Super_Mario_Bros_Coin_Sound_Effect.mp3"></source>
+                </audio>
+                <audio className="fail" ref={ref => {fail_a = ref}}>
+                  <source src="https://vignette.wikia.nocookie.net/soundeffects/images/6/65/Question_Block_Hit.ogg"></source>
+                </audio>
               </div>
             </>
       );
+
+      waitUntil({'value': this.state.q_c}, undefined, 10000).then(() => console.log('troled'), () => console.log('no'));
+      //this.refreshContent();
+  }
+
+  refreshContent() {
+    this.setState({content: (
+          <>
+            <div id="prompt_aln">
+              <h2 id="prompt">{this.state.currPrompt}</h2>
+            </div>
+            <Question type={this.qs[0][1]} phrase={this.qs[0][0].phrase}
+                      translation={this.qs[0][0].translation} prompter={this.setPrompt.bind(this)}
+                      choices={this.qs[0][0].choices} ref={ref => {this.state.q_c = ref}}
+                      eng={this.qs[0][0].eng} clong={this.qs[0][0].clong} parent={this}/>
+            <div id="checkbar" style={this.state.answering?{}:{backgroundColor: this.state.barColor}}>
+              <div id="checktext">
+                  {this.state.barText}
+              </div>
+              {/*!this.state.answering && <Card />*/}
+              <Button id="continuebutton" disabled={this.state.checkDisabled}
+                      onClick={() => this.state.q_c.checkAns(this.displayStatus.bind(this))} positive>
+                {this.state.answering?"Check":"Next"}
+              </Button>
+              <audio className="success" ref={ref => {success_a = ref}}>
+                <source src="http://soundfxcenter.com/video-games/super-mario-bros/8d82b5_Super_Mario_Bros_Coin_Sound_Effect.mp3"></source>
+              </audio>
+              <audio className="fail" ref={ref => {fail_a = ref}}>
+                <source src="https://vignette.wikia.nocookie.net/soundeffects/images/6/65/Question_Block_Hit.ogg"></source>
+              </audio>
+            </div>
+          </>
+        )});
+  }
+
+  // Functions for child elements to use
+  toggleClick() {
+    this.setState({answering: !this.state.answering});
+  }
+
+  setPrompt(p) {
+    this.setState({currPrompt: p});
+    this.refreshContent();
+  }
+
+  displayStatus(correct,ans) {
+    console.log("perkele");
+    let text = "";
+    if (correct==2) {
+      text="Correct. Another correct response is '"+ans+"'.";
+    }
+    else if (correct) {
+      text="Correct. Good job!";
+    }
+    else {
+      text="The correct answer was '"+ans+"'."
+    }
+    this.setState({barColor: correct?"#0f0":"#f00", barText: text})
+    this.refreshContent();
   }
 
   render() {
+    console.log("dis ben gerendeered");
+    console.log(this.state.content);
     return this.state.content;
   }
 }
