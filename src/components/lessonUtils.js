@@ -8,20 +8,21 @@ export class WordOption extends React.Component {
   constructor(props) {
     super(props);
     this.lang=props.lang;
-    this.state={text:props.text,move:props.move};
+    this.state={text:props.text,move:props.move,color:props.color};
   }
 
   static getDerivedStateFromProps(nextProps, prevState) {
     return nextProps.text
-        ? { text: nextProps.text, move: nextProps.move }
-        : { text: prevState.text, move: prevState.move };
+        ? { text: nextProps.text, move: nextProps.move, color: nextProps.color }
+        : { text: prevState.text, move: prevState.move, color: prevState.color };
   }
 
   render() {
     //TODO format
     return (
         <Button disabled={this.state.disabled}
-                onClick={this.state.move}>
+                onClick={this.state.move}
+                color={this.state.color}>
           {this.state.text}
         </Button>
     );
@@ -111,6 +112,39 @@ export class TranslationLines extends React.Component {
     return (
         <div id="translation">
           {out}
+        </div>
+    );
+  }
+}
+
+export class MultiChoice extends React.Component {
+  constructor(props) {
+    super(props);
+    this.handler=props.handler;
+    this.getColor=props.colorAt;
+    this.lang = props.lang;
+    this.state = {
+        children: props.opts,
+    }
+  }
+
+  select(i) {
+    this.handler(i);
+  }
+
+  render() {
+    let cNodes = [];
+    for (var i=0; i<this.state.children.length; i++) {
+      let ind = i;
+      const word = (
+          <WordOption text={this.state.children[i]} lang={this.lang}
+                      move={() => this.select(ind)} color={this.getColor(ind)}/>
+      );
+      cNodes.push(word);
+    }
+    return (
+        <div id="mc_list">
+          {cNodes}
         </div>
     );
   }

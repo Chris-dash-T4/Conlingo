@@ -1,12 +1,12 @@
 import React from 'react'
 import { Button, Card, Form } from 'semantic-ui-react';
 import './lesson.css'
-import { positions, WordOption, WordBank, TranslationLines } from './lessonUtils.js';
+import { positions, WordOption, WordBank, TranslationLines, MultiChoice } from './lessonUtils.js';
 
 let currPrompt = "click to add text";
 let clong_name = "bruh";
 let strip_punct = (s) => {
-    s.replace('.','').replace(',','').replace("'",'').replace('"','').replace(';','').replace(':','').replace('!','').replace('?','').replace('\n','');
+    return s.replace('.','').replace(',','').replace("'",'').replace('"','').replace(';','').replace(':','').replace('!','').replace('?','').replace('\n','');
 }
 //vars so thing doesn't break
 var success_a;
@@ -134,6 +134,7 @@ class Question extends React.Component {
     setPrompt("Write this in "+lang+".");
     var i;
     if (this.type === Question.bank) {
+      /*
       let bank_em = [];
       for (i=0; i<this.choices.length; i++) {
         // TODO implement font features
@@ -144,6 +145,7 @@ class Question extends React.Component {
         );
         bank_em.push(bank_w);
       }
+      */
       this.state.content = (
           <div id="question_content">
             <div id="original">
@@ -162,26 +164,30 @@ class Question extends React.Component {
       );
     }
     if (this.type === Question.multichoice) {
-      let list_em = [];
+      //let list_em = [];
+      this.state.mcColor = [];
       for (i=0; i<this.choices.length; i++) {
+        /*
         // TODO implement font features
         const index = i;
         const mcc = (
             <Button className="mc_choice" id={"mcc"+i}
-                     onclick={console.log(index)}>
+                     onclick={console.log(index)} color={this.state.mcColor[i]}>
               {this.choices[i]}
             </Button>
         );
         list_em.push(mcc);
+        */
+        this.state.mcColor.push(undefined);
       }
       this.state.content = (
           <div id="question_content">
             <div id="original">
               {this.phrase}
             </div>
-            <div id="mc_list">
-              {list_em}
-            </div>
+            <MultiChoice lang={lang} opts={this.choices}
+                         colorAt={i => this.state.mcColor[i]}
+                         handler={this.mc_select.bind(this)}/>
           </div>
       );
       setPrompt("Select the correct translation.");
@@ -193,7 +199,7 @@ class Question extends React.Component {
               {this.phrase}
             </div>
             <Form id="sentence_container">
-              <Form.TextArea label="response" id="sentence"
+              <Form.TextArea id="sentence"
                              placeholder={'Enter '+lang+' text...'} />
             </Form>
           </div>
@@ -268,6 +274,19 @@ class Question extends React.Component {
     }
   }
 
+  mc_select(n) {
+    if (n < 0 || n >= this.state.mcColor) return;
+    let c0 = [...this.state.mcColor];
+    for (let i=0; i<c0.length; i++) {
+      if (i===n) {
+        if (c0[i]) c0[i] = undefined;
+        else c0[i] = "grey";
+      }
+      else c0[i] = undefined;
+    }
+    this.setState({mcColor: c0});
+  }
+
   verify() {
     var fin_tr="";
     var i;
@@ -289,34 +308,37 @@ class Question extends React.Component {
       }
     }//^^ wordbank
     if (this.type===Question.multichoice) {
-      const choices = document.getElementsByClassName("mc_choice");
-      var fin_ch;
-      for (i=0;i<choices.length;i++){
-        if (choices.item(i).style.backgroundColor !== "") {
-          fin_ch=choices.item(i);
-          fin_tr=fin_ch.innerText;
+      var i0 = -1;
+      for (i=0;i<this.choices.length;i++){
+        if (this.state.mcColor[i]) {
+          fin_tr=this.choices[i];
+          i0 = i;
         }
       }
-      if (fin_ch===null) {return false;}
+      if (i0 < 0) {return -1;}
       console.log('"'+fin_tr+'"');
       if (fin_tr===this.translation[0]) {
-        fin_ch.style.backgroundColor="#77f";
+        let mcColor=this.choices.map(x => undefined);
+        mcColor[i0] = "green";
+        this.setState({mcColor});
         return true;
       }
       else {
         console.log("Expected:"+this.translation+"\nReceived:"+fin_tr);
-        fin_ch.style.backgroundColor="#f77";
-        for (i=0;i<choices.length;i++){
-          if (choices.item(i).innerText === this.translation[0]) {
-            choices.item(i).style.backgroundColor="#7f7";
+        let mcColor=this.choices.map(x => undefined);
+        mcColor[i0] = "red";
+        for (i=0;i<this.choices.length;i++){
+          if (this.choices[i] === this.translation[0]) {
+            mcColor[i] = "green";
           }
         }
+        this.setState({mcColor});
         return false;
       }
     }//^^ multiple choice
     if (this.type===Question.sentence) {
       const fin_em = document.getElementById("sentence");
-      fin_tr=fin_em.value.toLowerCase();
+      fin_tr=strip_punct(fin_em.value.toLowerCase());
       console.log('"'+fin_tr+'"');
       if (fin_tr===this.translation[0]) {
         return true;
@@ -351,6 +373,10 @@ class Question extends React.Component {
     console.log("check");
     this.par.toggleClick();
     const correct = this.verify();
+    if (correct === -1) {
+      this.par.toggleClick();
+      return;
+    }
     update(correct, this.translation[0]);
     if (correct) {
       success_a.play();
