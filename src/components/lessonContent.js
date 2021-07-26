@@ -441,17 +441,18 @@ class QuestionContainer extends React.Component {
       q_data.push([sample6,Question.matching]);
 
       const qs = [];
-      const refs = [];
+      const refs = q_data.map(x=>null);
       for (var i = 0; i < q_data.length; i++) {
         let j = i;
         const q_n = (
             <Question type={q_data[j][1]} phrase={q_data[j][0].phrase}
                       translation={q_data[j][0].translation} prompter={this.setPrompt.bind(this)}
-                      choices={q_data[j][0].choices} ref={ref => {if (ref && refs.length <= j) refs.push(ref); console.log(j); console.log(ref);}}
+                      choices={q_data[j][0].choices} ref={ref => {if (ref && refs[j] == null) refs[j]=ref; console.log(j); console.log(ref);}}
                       eng={q_data[j][0].eng} clong={q_data[j][0].clong} parent={this}/>
             );
         qs.push(q_n);
       }
+      this.q_data = q_data;
 
       const dat_out=JSON.stringify(this.qs);
       console.log(dat_out);
@@ -528,9 +529,25 @@ class QuestionContainer extends React.Component {
     //this.refreshContent();
   }
 
+  reappendQuestion(index) {
+    let qs = [...this.state.qs];
+    let refs = this.state.refs;
+    refs.push(null);
+    const q_n = (
+        <Question type={this.q_data[index][1]} phrase={this.q_data[index][0].phrase}
+                  translation={this.q_data[index][0].translation} prompter={this.setPrompt.bind(this)}
+                  choices={this.q_data[index][0].choices} ref={ref => {if (ref /*&& refs.length == qs.length - 1*/) refs[refs.length-1] = ref;}}
+                  eng={this.q_data[index][0].eng} clong={this.q_data[index][0].clong} parent={this}/>
+        );
+    qs.push(q_n);
+    //refs.push(refs[index]);
+    this.setState({qs, refs});
+    return;
+  }
+
   displayStatus(correct,ans) {
     let text = "";
-    let qs = this.state.qs;
+    let refs = this.state.refs;
     if (correct===2) {
       text="Correct. Another correct response is '"+ans+"'.";
     }
@@ -539,13 +556,18 @@ class QuestionContainer extends React.Component {
     }
     else {
       text="The correct answer was '"+ans+"'."
-      qs.push(qs[0]);
+      this.reappendQuestion(this.state.q_c);
+      //qs.push(qs[0]);
+      //refs.push(refs[0]);
     }
-    this.setState({barColor: correct?"#0f0":"#f00", barText: text, qs})
+    this.setState({barColor: correct?"#0f0":"#f00", barText: text})
     waitUntil(this, o => o.state.barColor && o.state.barText).then(this.refreshContent.bind(this), () => console.log('bre'));
   }
 
   nextQuestion() {
+    if (this.state.q_c + 1 === this.state.qs.length) {
+      window.location.href = "/";
+    }
     this.setState({barColor: undefined, barText: "", q_c: this.state.q_c+1})
     this.toggleClick();
     this.refreshContent();
