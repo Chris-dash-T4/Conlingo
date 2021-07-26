@@ -8,10 +8,12 @@ export class WordOption extends React.Component {
   constructor(props) {
     super(props);
     this.lang=props.lang;
-    this.state={text:props.text,move:props.move,color:props.color};
+    this.state={text:props.text,move:props.move,active:props.active,disabled:props.disabled};
   }
 
+  // Updates state when parent components update
   static getDerivedStateFromProps(nextProps, prevState) {
+    if (nextProps.active !== prevState.active) return {active: nextProps.active, disabled: nextProps.disabled }
     return nextProps.text
         ? { text: nextProps.text, move: nextProps.move, color: nextProps.color }
         : { text: prevState.text, move: prevState.move, color: prevState.color };
@@ -22,7 +24,7 @@ export class WordOption extends React.Component {
     return (
         <Button disabled={this.state.disabled}
                 onClick={this.state.move}
-                color={this.state.color}>
+                active={this.state.active > 0}>
           {this.state.text}
         </Button>
     );
@@ -79,12 +81,6 @@ export class TranslationLines extends React.Component {
     }
   }
 
-  /*static getDerivedStateFromProps(nextProps, prevState) {
-    return nextProps.children
-        ? { children: nextProps.children }
-        : { children: prevState.children };
-  }*/
-
   move(i) {
     this.handler(i);
   }
@@ -121,10 +117,10 @@ export class MultiChoice extends React.Component {
   constructor(props) {
     super(props);
     this.handler=props.handler;
-    this.getColor=props.colorAt;
     this.lang = props.lang;
     this.state = {
         children: props.opts,
+        active: props.sel
     }
   }
 
@@ -133,19 +129,94 @@ export class MultiChoice extends React.Component {
   }
 
   render() {
+    console.log("rendering multichoice");
+    // console.log(this.state.active);
     let cNodes = [];
     for (var i=0; i<this.state.children.length; i++) {
       let ind = i;
+      console.log("i="+i);
       const word = (
           <WordOption text={this.state.children[i]} lang={this.lang}
-                      move={() => this.select(ind)} color={this.getColor(ind)}/>
+                      move={() => this.select(ind)} active={ind===this.state.active}/>
       );
       cNodes.push(word);
     }
     return (
-        <div id="mc_list">
+        <Button.Group vertical fluid id="mc_list">
           {cNodes}
-        </div>
+        </Button.Group>
     );
   }
 }
+
+export class MatchCols extends React.Component {
+  constructor(props) {
+    super(props);
+    this.l_handler=props.l_handler;
+    this.r_handler=props.r_handler;
+    this.l_lang = props.natlang;
+    this.r_lang = props.lang;
+    this.state = {
+        children: props.pairs,
+        active: props.sel,
+        matched: []
+    }
+  }
+
+  selectRight(i) {
+    this.r_handler(i);
+  }
+
+  selectLeft(i) {
+    this.l_handler(i);
+  }
+
+  isMatched(i,col) {
+    for (var j=0; j<this.state.matched.length; j++) {
+      if (this.state.matched[j][col]===i) return true;
+    }
+    return false;
+  }
+
+  render() {
+    console.log("rendering matching");
+    console.log(this.state.active);
+    let leftNodes = [];
+    let rightNodes = [];
+    for (var i=0; i<this.state.children[0].length; i++) {
+      let ind = i;
+      console.log("i="+i);
+      const l_n = (
+          <WordOption text={this.state.children[0][i]} lang={this.l_lang}
+                      move={() => this.selectLeft(ind)}
+                      active={ind===this.state.active[0]}
+                      disabled={this.isMatched(ind,0)}/>
+      );
+      const r_n = (
+          <WordOption text={this.state.children[1][i]} lang={this.r_lang}
+                      move={() => this.selectRight(ind)}
+                      active={ind===this.state.active[1]}
+                      disabled={this.isMatched(ind,1)}/>
+      );
+      leftNodes.push(l_n);
+      rightNodes.push(r_n);
+    }
+    return (
+        <>
+          <Button.Group vertical floated='left' id="match_l">
+            {leftNodes}
+          </Button.Group>
+          <Button.Group vertical floated='right' id="match_r">
+            {rightNodes}
+          </Button.Group>
+        </>
+    );
+  }
+}
+
+/*
+export class SentenceBox extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state
+}*/

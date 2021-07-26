@@ -1,13 +1,12 @@
 import React from 'react'
 import { Button, Card, Form } from 'semantic-ui-react';
 import './lesson.css'
-import { positions, WordOption, WordBank, TranslationLines, MultiChoice } from './lessonUtils.js';
+import { positions, WordOption, WordBank, TranslationLines, MultiChoice, MatchCols } from './lessonUtils.js';
 
+// TODO import from JSON input
 let currPrompt = "click to add text";
 let clong_name = "bruh";
-let strip_punct = (s) => {
-    return s.replace('.','').replace(',','').replace("'",'').replace('"','').replace(';','').replace(':','').replace('!','').replace('?','').replace('\n','');
-}
+
 //vars so thing doesn't break
 var success_a;
 var fail_a;
@@ -86,6 +85,13 @@ function equiv(a, b) {
   return true;
 }
 
+// lambdas
+const strip_punct = (s) => {
+    return s.replace('.','').replace(',','').replace("'",'').replace('"','').replace(';','').replace(':','').replace('!','').replace('?','').replace('\n','');
+}
+const noop = require('node-noop').noop;
+const findmatch = (xs, y, eq) => xs.map(x => eq(x,y)).indexOf(true);
+
 function waitUntil(param, test = (x => x), time = 3000) {
   //console.log('helo');
   return new Promise((resolve,reject) => {
@@ -99,7 +105,7 @@ function waitUntil(param, test = (x => x), time = 3000) {
         console.log('not met, time out');
         reject();
       } else {
-        window.setTimeout(checkFlag, 1000);
+        window.setTimeout(checkFlag, 100);
       }
     }
     checkFlag();
@@ -134,18 +140,6 @@ class Question extends React.Component {
     setPrompt("Write this in "+lang+".");
     var i;
     if (this.type === Question.bank) {
-      /*
-      let bank_em = [];
-      for (i=0; i<this.choices.length; i++) {
-        // TODO implement font features
-        const index = i;
-        const position = positions.bank;
-        const bank_w = (
-            <WordOption text={this.choices[i]} lang={lang} pos={position}/>
-        );
-        bank_em.push(bank_w);
-      }
-      */
       this.state.content = (
           <div id="question_content">
             <div id="original">
@@ -164,30 +158,16 @@ class Question extends React.Component {
       );
     }
     if (this.type === Question.multichoice) {
-      //let list_em = [];
-      this.state.mcColor = [];
-      for (i=0; i<this.choices.length; i++) {
-        /*
-        // TODO implement font features
-        const index = i;
-        const mcc = (
-            <Button className="mc_choice" id={"mcc"+i}
-                     onclick={console.log(index)} color={this.state.mcColor[i]}>
-              {this.choices[i]}
-            </Button>
-        );
-        list_em.push(mcc);
-        */
-        this.state.mcColor.push(undefined);
-      }
+      this.state.selection = -1;
       this.state.content = (
           <div id="question_content">
             <div id="original">
               {this.phrase}
             </div>
             <MultiChoice lang={lang} opts={this.choices}
-                         colorAt={i => this.state.mcColor[i]}
-                         handler={this.mc_select.bind(this)}/>
+                         sel={this.state.selection}
+                         handler={this.mc_select.bind(this)}
+                         ref={ref => (this.children.mc = ref)}/>
           </div>
       );
       setPrompt("Select the correct translation.");
@@ -211,25 +191,26 @@ class Question extends React.Component {
     if (this.type === Question.matching) {
       this.choices = props.choices;
       var words = []
+      words.push(shuffle(this.choices.map(x => x[0])));
+      words.push(shuffle(this.choices.map(x => x[1])));
+      this.pairs = [];
       for (i=0;i<this.choices.length;i++) {
-        words.push([this.choices[i][0],true]);
-        words.push([this.choices[i][1],false]);
+        this.pairs.push([
+            words[0].indexOf(this.choices[i][0]),
+            words[1].indexOf(this.choices[i][1])
+        ]);
+        // This should contain no duplicates so long as the input contains
+        // no duplicates
       }
-      words=shuffle(words);
-      let pair_em = [];
-      for (i=0;i<words.length;i++) {
-        const pair_w = (
-            <Button className="mp_opt" onClick={() => {this.onePair(i)}}>
-              {words[i][0]}
-            </Button>
-        );
-        pair_em.push(pair_w);
-      }
+      console.log(this.pairs);
+      this.state.selection = [-1,-1];
       this.state.content = (
           <div id="question_content">
-            <div id="pair_container">
-              {pair_em}
-            </div>
+            <MatchCols lang={lang} pairs={words} natlang={"English"}
+                       sel={this.state.selection}
+                       l_handler={this.onePair.bind(this)}
+                       r_handler={this.twoPair.bind(this)}
+                       ref={ref => (this.children.match = ref)}/>
           </div>
       );
       setPrompt("Match the pairs.");
@@ -275,22 +256,54 @@ class Question extends React.Component {
   }
 
   mc_select(n) {
-    if (n < 0 || n >= this.state.mcColor) return;
-    let c0 = [...this.state.mcColor];
-    for (let i=0; i<c0.length; i++) {
-      if (i===n) {
-        if (c0[i]) c0[i] = undefined;
-        else c0[i] = "grey";
-      }
-      else c0[i] = undefined;
+    let sel = n;
+    if (n===this.state.selection) sel=-1;
+    this.setState({selection: sel});
+    this.children.mc.setState({active: sel});
+  }
+
+  checkPair() {
+    let p = findmatch(this.pairs,this.state.selection,arraysEqual);
+    console.log(this.pairs);
+    console.log(this.state.selection);
+    console.log(this.pairs.map(x=>x[0]).indexOf(this.state.selection[0]));
+    if (p < 0) {
+      fail_a.play();
+      this.setState({selection: [-1,-1]});
+      this.children.match.setState({active: [-1,-1]});
+    } else {
+      let matches = [...this.children.match.state.matched];
+      matches.push(this.pairs[p]);
+      this.pairs.splice(p,1);
+      this.setState({selection: [-1,-1]});
+      this.children.match.setState({active: [-1,-1], matched: matches});
+      if (this.pairs.length===0)
+        this.par.checkCurrent();
     }
-    this.setState({mcColor: c0});
+  }
+
+  onePair(n) {
+    let selection = [...this.state.selection];
+    selection[0] = n;
+    this.setState({selection});
+    this.children.match.setState({active: selection});
+    console.log('1p');
+    waitUntil(this, o=>o.state.selection.indexOf(-1)===-1).then(this.checkPair.bind(this),noop);
+    //if (selection.indexOf(-1)===-1) this.checkPair();
+  }
+
+  twoPair(n) {
+    let selection = [...this.state.selection];
+    selection[1] = n;
+    this.setState({selection});
+    this.children.match.setState({active: selection});
+    console.log('2p');
+    //if (selection.indexOf(-1)===-1) this.checkPair();
   }
 
   verify() {
     var fin_tr="";
     var i;
-    var j;
     if (this.type===Question.bank) {
       fin_tr = this.state.lines.join(' ');
       console.log('"'+fin_tr+'"');
@@ -308,31 +321,25 @@ class Question extends React.Component {
       }
     }//^^ wordbank
     if (this.type===Question.multichoice) {
-      var i0 = -1;
-      for (i=0;i<this.choices.length;i++){
-        if (this.state.mcColor[i]) {
-          fin_tr=this.choices[i];
-          i0 = i;
-        }
-      }
-      if (i0 < 0) {return -1;}
+      if (this.state.selection === -1) {return -1;}
+      fin_tr=this.choices[this.state.selection];
       console.log('"'+fin_tr+'"');
       if (fin_tr===this.translation[0]) {
-        let mcColor=this.choices.map(x => undefined);
+        /*let mcColor=this.choices.map(x => undefined);
         mcColor[i0] = "green";
-        this.setState({mcColor});
+        this.setState({mcColor});*/
         return true;
       }
       else {
         console.log("Expected:"+this.translation+"\nReceived:"+fin_tr);
-        let mcColor=this.choices.map(x => undefined);
+        /*let mcColor=this.choices.map(x => undefined);
         mcColor[i0] = "red";
         for (i=0;i<this.choices.length;i++){
           if (this.choices[i] === this.translation[0]) {
             mcColor[i] = "green";
           }
         }
-        this.setState({mcColor});
+        this.setState({mcColor});*/
         return false;
       }
     }//^^ multiple choice
@@ -354,19 +361,10 @@ class Question extends React.Component {
       }
     }//^^ sentence entry
     if (this.type===Question.matching) {
-      if (this.choices.length === 0) {
-        return true;
-      }
+      if (this.pairs.length === 0) return true;
+      else return -1;
     }
     return false;
-  }
-
-  onePair(n) {
-    console.log('1p');
-  }
-
-  twoPair(n,pair_em,other,item) {
-    console.log('2p');
   }
 
   checkAns(update) {
@@ -377,6 +375,7 @@ class Question extends React.Component {
       this.par.toggleClick();
       return;
     }
+    if (!this.translation) this.translation=[undefined];
     update(correct, this.translation[0]);
     if (correct) {
       success_a.play();
@@ -513,6 +512,10 @@ class QuestionContainer extends React.Component {
             </div>
           </>
         )});
+  }
+
+  checkCurrent() {
+      this.state.refs[this.state.q_c].checkAns(this.displayStatus.bind(this));
   }
 
   // Functions for child elements to use
