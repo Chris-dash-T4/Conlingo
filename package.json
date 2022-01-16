@@ -12,8 +12,11 @@
   "license": "ISC",
   "dependencies": {
     "axios": "^0.21.1",
+    "fs": "^0.0.1-security",
+    "fs-web": "^1.0.1",
     "gatsby": "^2.30.1",
-    "gatsby-plugin-less": "^4.5.0",
+    "gatsby-plugin-less": "next",
+    "gatsby-source-filesystem": "^2.11.1",
     "node-noop": "^1.0.0",
     "react": "^17.0.1",
     "react-async": "^10.0.1",

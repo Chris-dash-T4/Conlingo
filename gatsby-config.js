@@ -6,5 +6,12 @@
 
 module.exports = {
   /* Your site config here */
-  plugins: [`gatsby-plugin-less`],
+  plugins: [
+    {
+      resolve: `gatsby-plugin-less`,
+      options: {
+        javascriptEnabled: true
+      }
+    }
+  ]
 }

@@ -1,5 +1,7 @@
+//import * as fs from 'fs-web'
 import React from 'react'
-import { Button, Card, Form } from 'semantic-ui-react';
+import { Button, Progress, Form } from 'semantic-ui-react';
+//import '../../fonts/stylesheet.scss';
 import './lesson.css'
 import { positions, WordOption, WordBank, TranslationLines, MultiChoice, MatchCols } from './lessonUtils.js';
 
@@ -97,9 +99,9 @@ function waitUntil(param, test = (x => x), time = 3000) {
   return new Promise((resolve,reject) => {
     var start_time = Date.now();
     function checkFlag() {
-      console.log(param);
+      //console.log(param);
       if (test(param)) {
-        console.log('met');
+        //console.log('met');
         resolve();
       } else if (Date.now() > start_time + time) {
         console.log('not met, time out');
@@ -142,7 +144,7 @@ class Question extends React.Component {
     if (this.type === Question.bank) {
       this.state.content = (
           <div id="question_content">
-            <div id="original">
+            <div id="original" className={this.clong?"english":clong_name.toLowerCase()}>
               {this.phrase}
             </div>
             <TranslationLines handler={this.toBank.bind(this)} lang={lang}
@@ -161,7 +163,7 @@ class Question extends React.Component {
       this.state.selection = -1;
       this.state.content = (
           <div id="question_content">
-            <div id="original">
+            <div id="original" className={this.clong?"english":clong_name.toLowerCase()}>
               {this.phrase}
             </div>
             <MultiChoice lang={lang} opts={this.choices}
@@ -175,7 +177,7 @@ class Question extends React.Component {
     if (this.type === Question.sentence) {
       this.state.content = (
           <div id="question_content">
-            <div id="original">
+            <div id="original" className={this.clong?"english":clong_name.toLowerCase()}>
               {this.phrase}
             </div>
             <Form id="sentence_container">
@@ -202,7 +204,7 @@ class Question extends React.Component {
         // This should contain no duplicates so long as the input contains
         // no duplicates
       }
-      console.log(this.pairs);
+      //console.log(this.pairs);
       this.state.selection = [-1,-1];
       this.state.content = (
           <div id="question_content">
@@ -264,9 +266,9 @@ class Question extends React.Component {
 
   checkPair() {
     let p = findmatch(this.pairs,this.state.selection,arraysEqual);
-    console.log(this.pairs);
-    console.log(this.state.selection);
-    console.log(this.pairs.map(x=>x[0]).indexOf(this.state.selection[0]));
+    //console.log(this.pairs);
+    //console.log(this.state.selection);
+    //console.log(this.pairs.map(x=>x[0]).indexOf(this.state.selection[0]));
     if (p < 0) {
       fail_a.play();
       this.setState({selection: [-1,-1]});
@@ -287,7 +289,7 @@ class Question extends React.Component {
     selection[0] = n;
     this.setState({selection});
     this.children.match.setState({active: selection});
-    console.log('1p');
+    //console.log('1p');
     waitUntil(this, o=>o.state.selection.indexOf(-1)===-1).then(this.checkPair.bind(this),noop);
     //if (selection.indexOf(-1)===-1) this.checkPair();
   }
@@ -297,7 +299,7 @@ class Question extends React.Component {
     selection[1] = n;
     this.setState({selection});
     this.children.match.setState({active: selection});
-    console.log('2p');
+    //console.log('2p');
     //if (selection.indexOf(-1)===-1) this.checkPair();
   }
 
@@ -352,7 +354,7 @@ class Question extends React.Component {
       }
       else if (this.translation.length > 1) {
         for (i=1;i<this.translation.length;i++) {
-          console.log(this.translation[i]);
+          //console.log(this.translation[i]);
           if (fin_tr===this.translation[i]) { return 2; }
         }
       }
@@ -397,9 +399,15 @@ class Question extends React.Component {
 class QuestionContainer extends React.Component {
   constructor(props) {
       super();
-      this.clong_name=props.lang;
+      clong_name=this.clong_name=props.lang;
       console.log(this.clong_name);
-      let q_data=[]; // TODO load from db/json
+
+      // Import data from JSON
+      // let raw_json=JSON.stringify([]);
+      let q_data=props.data.map(x=>x);
+      // May be worth considering going to a more robust DB in the future
+
+      /*
       const sample1 = {
             "phrase":"Man.",
             "translation":["Horse"],
@@ -439,6 +447,7 @@ class QuestionContainer extends React.Component {
       q_data.push([sample4,Question.sentence]);
       q_data.push([sample5,Question.bank]);
       q_data.push([sample6,Question.matching]);
+      //*/
 
       const qs = [];
       const refs = q_data.map(x=>null);
@@ -447,7 +456,7 @@ class QuestionContainer extends React.Component {
         const q_n = (
             <Question type={q_data[j][1]} phrase={q_data[j][0].phrase}
                       translation={q_data[j][0].translation} prompter={this.setPrompt.bind(this)}
-                      choices={q_data[j][0].choices} ref={ref => {if (ref && refs[j] == null) refs[j]=ref; console.log(j); console.log(ref);}}
+                      choices={q_data[j][0].choices} ref={ref => {if (ref && refs[j] == null) refs[j]=ref; /*console.log(j); console.log(ref);*/}}
                       eng={q_data[j][0].eng} clong={q_data[j][0].clong} parent={this}/>
             );
         qs.push(q_n);
@@ -455,11 +464,14 @@ class QuestionContainer extends React.Component {
       this.q_data = q_data;
 
       const dat_out=JSON.stringify(this.qs);
-      console.log(dat_out);
+      //console.log(dat_out);
       this.state = {checkDisabled: false, answering: true, currPrompt: "click to add text", qs, refs, q_c: 0};
 
       this.state.content = (
             <>
+              <div id="progressbar">
+                <Progress percent={0} indicating/>
+              </div>
               <div id="prompt_aln">
                 <h2 id="prompt">{this.state.currPrompt}</h2>
               </div>
@@ -490,6 +502,9 @@ class QuestionContainer extends React.Component {
   refreshContent() {
     this.setState({content: (
           <>
+            <div id="progressbar">
+              <Progress value={this.state.q_c} total={this.state.qs.length} indicating/>
+            </div>
             <div id="prompt_aln">
               <h2 id="prompt">{this.state.currPrompt}</h2>
             </div>
@@ -498,7 +513,6 @@ class QuestionContainer extends React.Component {
               <div id="checktext">
                   {this.state.barText}
               </div>
-              {/*!this.state.answering && <Card />*/}
               <Button id="continuebutton" disabled={this.state.checkDisabled}
                       onClick={this.state.answering?() => this.state.refs[this.state.q_c].checkAns(this.displayStatus.bind(this)):this.nextQuestion.bind(this)}
                       positive>
@@ -536,7 +550,7 @@ class QuestionContainer extends React.Component {
     const q_n = (
         <Question type={this.q_data[index][1]} phrase={this.q_data[index][0].phrase}
                   translation={this.q_data[index][0].translation} prompter={this.setPrompt.bind(this)}
-                  choices={this.q_data[index][0].choices} ref={ref => {if (ref /*&& refs.length == qs.length - 1*/) refs[refs.length-1] = ref;}}
+                  choices={this.q_data[index][0].choices} ref={ref => {if (ref) refs[refs.length-1] = ref;}}
                   eng={this.q_data[index][0].eng} clong={this.q_data[index][0].clong} parent={this}/>
         );
     qs.push(q_n);
@@ -581,10 +595,11 @@ class QuestionContainer extends React.Component {
   }
 }
 
-const MyInfo = (props) => {
+const LessonContent = (props) => {
+  //console.log(props.data);
   return (
-    <QuestionContainer path={props.path}/>
+    <QuestionContainer lang={props.langName} data={props.data}/>
   );
 }
 
-export default MyInfo
+export default LessonContent

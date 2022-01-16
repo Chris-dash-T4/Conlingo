@@ -24,7 +24,8 @@ export class WordOption extends React.Component {
     return (
         <Button disabled={this.state.disabled}
                 onClick={this.state.move}
-                active={this.state.active > 0}>
+                active={this.state.active > 0}
+                className={this.lang.toLowerCase()}>
           {this.state.text}
         </Button>
     );
